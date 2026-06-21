@@ -772,6 +772,11 @@ body.dark .cmp-row:hover{background:var(--line)}
 
   <!-- ══ BARRA DE EXPORTAÇÃO GLOBAL ══ -->
   <div class="export-bar" id="exportGlobalBar">
+    <span class="export-bar-label" style="display:flex;align-items:center;gap:8px">
+      📅 Período:
+      <input type="month" id="globalMonthSelector" onchange="changeGlobalMonth(this.value)" style="padding:5px 10px;font-size:13px;border-radius:var(--r-xs);border:1.5px solid var(--line);background:var(--cream);outline:none;font-family:var(--sans);font-weight:600;width:140px;height:auto">
+    </span>
+    <div style="width:1px;height:20px;background:var(--line);margin:0 10px"></div>
     <span class="export-bar-label">💾 Backup</span>
     <button class="btn btn-p btn-sm" onclick="exportJSON()">⬇ Backup JSON</button>
     <button class="btn btn-xlsx btn-sm" onclick="exportXLSX()">⬇ Excel (.xlsx)</button>
@@ -820,9 +825,9 @@ body.dark .cmp-row:hover{background:var(--line)}
             <button onclick="salvarMeta()" style="background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.3);color:#fff;padding:8px 14px;border-radius:var(--r-sm);font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;transition:background .18s;white-space:nowrap" onmouseover="this.style.background='rgba(255,255,255,.28)'" onmouseout="this.style.background='rgba(255,255,255,.18)'">✓ Definir</button>
           </div>
         </div>
-        <div class="hb-item"><div class="hb-label">Saldo Atual</div><div class="hb-value" id="hbSaldo">R$ 0,00</div><div class="hb-sub">acumulado geral</div></div>
-        <div class="hb-item"><div class="hb-label">Reserva cobre</div><div class="hb-value" id="hbMeses">— meses</div><div class="hb-sub">de despesas mensais</div></div>
-        <div class="hb-item"><div class="hb-label">Meta</div><div class="hb-value" id="hbMetaPct">—</div><div class="hb-track"><div class="hb-fill" id="hbFill" style="width:0%"></div></div></div>
+        <div class="hb-item"><div class="hb-label">Saldo Livre</div><div class="hb-value" id="hbSaldoLivre">R$ 0,00</div><div class="hb-sub">disponível para uso</div></div>
+        <div class="hb-item"><div class="hb-label">Saldo Reservado</div><div class="hb-value" id="hbSaldoReservado">R$ 0,00</div><div class="hb-sub">reserva + investimentos</div></div>
+        <div class="hb-item"><div class="hb-label">Fatura Cartão (Mês Anterior)</div><div class="hb-value" id="hbFaturaPagar">R$ 0,00</div><div class="hb-sub">paga este mês</div></div>
       </div>
 
       <!-- Chips titular -->
@@ -865,6 +870,18 @@ body.dark .cmp-row:hover{background:var(--line)}
         <div class="panel"><div class="panel-hd"><div class="panel-ico">💡</div><div class="panel-title">Insights automáticos</div></div><div class="ins-list" id="insights"><div class="empty"><div class="empty-icon">💡</div><p>Adicione lançamentos para ver os insights.</p></div></div></div>
       </div>
 
+      <!-- Projeção Prox Mês e Histórico 6 Meses -->
+      <div class="grid-2" style="margin-top:20px">
+        <div class="panel">
+          <div class="panel-hd"><div class="panel-ico">🔮</div><div class="panel-title">Projeção para o Próximo Mês</div></div>
+          <div id="dashProjProxMes" style="padding:15px"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-hd"><div class="panel-ico">⏳</div><div class="panel-title">Histórico dos Últimos 6 Meses</div></div>
+          <div id="dashHist6Meses" style="padding:0;overflow:hidden"></div>
+        </div>
+      </div>
+
       <!-- Evolução do Saldo + Comparativo -->
       <div class="grid-2" style="margin-top:20px">
         <div class="panel">
@@ -897,7 +914,7 @@ body.dark .cmp-row:hover{background:var(--line)}
     </div>
     <div class="page-body">
       <div class="filter-bar">
-        <label>Mês</label><input type="month" id="filtroMesE" onchange="renderTabelaEntradas()">
+        <label>Mês</label><input type="month" id="filtroMesE" onchange="changeGlobalMonth(this.value)">
         <div class="fb-sep"></div>
         <label>Titular</label>
         <select id="filtroTitularE" onchange="renderTabelaEntradas()" style="width:130px"><option value="">Todos</option></select>
@@ -935,7 +952,7 @@ body.dark .cmp-row:hover{background:var(--line)}
     </div>
     <div class="page-body">
       <div class="filter-bar">
-        <label>Mês</label><input type="month" id="filtroMes" onchange="renderTabela()">
+        <label>Mês</label><input type="month" id="filtroMes" onchange="changeGlobalMonth(this.value)">
         <div class="fb-sep"></div>
         <label>Titular</label>
         <select id="filtroTitular" onchange="renderTabela()" style="width:130px"><option value="">Todos</option></select>
@@ -990,7 +1007,7 @@ body.dark .cmp-row:hover{background:var(--line)}
           <option value="ano">Ano atual</option>
           <option value="tudo">Todo o período</option>
         </select>
-        <input type="month" id="relMes" style="width:140px;display:none" onchange="renderRelatorio()">
+        <input type="month" id="relMes" style="width:140px;display:none" onchange="changeGlobalMonth(this.value)">
         <div class="fb-sep"></div>
         <label>Titular</label>
         <select id="relTitular" onchange="renderRelatorio()" style="width:130px"><option value="">Todos</option></select>
@@ -1423,6 +1440,7 @@ let editId        = null;
 let CHS           = {};
 let dashTitular   = '';
 let logEvts       = []; // log de atividade
+let currentViewMonth = mesAt();
 
 // Parametrização (editável pelo usuário)
 let P = {
@@ -1733,9 +1751,91 @@ const nomeMes  = nomeMesL; // alias — usada em renderEvolucao e renderComparat
 const nomeMesS = ms => { const M=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']; const[y,m]=ms.split('-').map(Number); return `${M[m-1]}/${String(y).slice(-2)}`; };
 const getLansMes = (m,t='') => lans.filter(l=>getMes(l.data)===m && (t===''||l.titular===t));
 const sumTipo    = (ls,t)   => ls.filter(l=>l.tipo===t).reduce((s,l)=>s+Number(l.valor),0);
-const saldoTotal = ()       => lans.reduce((s,l)=>l.tipo==='entrada'?s+Number(l.valor):s-Number(l.valor),0);
 const killChart  = k        => { if(CHS[k]){CHS[k].destroy();delete CHS[k];} };
 const escHtml    = s        => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+const addMonths = (dateStr, months) => {
+  const parts = dateStr.split('-');
+  const year = parseInt(parts[0]);
+  const month = parseInt(parts[1]) - 1;
+  const day = parseInt(parts[2]);
+  const target = new Date(year, month + months, 1);
+  const maxDays = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+  const targetDay = Math.min(day, maxDays);
+  target.setDate(targetDay);
+  const y = target.getFullYear();
+  const m = String(target.getMonth() + 1).padStart(2, '0');
+  const d = String(target.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+const getDescricaoHtml = (descricao) => {
+  const match = (descricao || '').match(/\[(\d+)\/(\d+)\]/);
+  const isUltima = match && match[1] === match[2];
+  let badge = '';
+  if (isUltima) {
+    badge = ` <span style="display:inline-flex;align-items:center;padding:1px 6px;border-radius:99px;font-size:9px;font-weight:700;background:#1B6E4F;color:#fff;margin-left:4px;vertical-align:middle">\\uD83C\\uDFC1 \\u00DAltima Parcela!</span>`;
+  }
+  return escHtml(descricao) + badge;
+};
+
+const saldoTotal = (mesMax = currentViewMonth) => {
+  return lans.reduce((s, l) => {
+    const m = getMes(l.data);
+    let effMonth = m;
+    if (l.tipo === 'despesa' && l.cartao && l.cartao !== '') {
+      effMonth = addMonths(m + '-01', 1).slice(0, 7);
+    }
+    if (effMonth <= mesMax) {
+      return l.tipo === 'entrada' ? s + Number(l.valor) : s - Number(l.valor);
+    }
+    return s;
+  }, 0);
+};
+
+const getLancamentosFluxoMes = (m) => {
+  return lans.filter(l => {
+    const month = getMes(l.data);
+    if (l.tipo === 'entrada') {
+      return month === m;
+    } else {
+      if (l.cartao && l.cartao !== '') {
+        return addMonths(month + '-01', 1).slice(0, 7) === m;
+      } else {
+        return month === m;
+      }
+    }
+  });
+};
+
+function getFinanciamentoParcelaInfo(l, mesFiltro) {
+  if (l.tipoFin !== 'financiamento' || !l.nParc || !l.quitacao || !mesFiltro) return '';
+  try {
+    const [qy, qm] = l.quitacao.split('-').map(Number);
+    const [vy, vm] = mesFiltro.split('-').map(Number);
+    if (!qy || !qm || !vy || !vm) return '';
+    const tQuit = qy * 12 + qm;
+    const tView = vy * 12 + vm;
+    const currentParc = tView - tQuit + Number(l.nParc);
+    if (currentParc > 0 && currentParc <= l.nParc) {
+      return `${currentParc}/${l.nParc}`;
+    }
+  } catch (e) {}
+  return '';
+}
+
+function getParcelaCell(l, mesFiltro) {
+  if (l.parcelado !== 'sim') return '—';
+  if (l.tipoFin === 'financiamento' && l.quitacao) {
+    const info = getFinanciamentoParcelaInfo(l, mesFiltro);
+    if (info) return info;
+  }
+  const match = l.descricao.match(/\[(\d+)\/(\d+)\]/);
+  if (match) {
+    return `${match[1]}/${match[2]}`;
+  }
+  return l.nParc + '×';
+}
 
 /* ══════════════════════════════════
    NAVEGAÇÃO
@@ -1766,6 +1866,40 @@ function go(id, el) {
     content.scrollTo({top:0, behavior:'smooth'});
   } else {
     window.scrollTo({top:0, behavior:'smooth'});
+  }
+}
+
+function changeGlobalMonth(val) {
+  if (!val) return;
+  currentViewMonth = val;
+
+  // Sincroniza todos os seletores de mês
+  const m1 = document.getElementById('globalMonthSelector');
+  if (m1) m1.value = val;
+  const m2 = document.getElementById('filtroMes');
+  if (m2) m2.value = val;
+  const m3 = document.getElementById('filtroMesE');
+  if (m3) m3.value = val;
+  const m4 = document.getElementById('relMes');
+  if (m4) m4.value = val;
+
+  // Atualiza rótulo na sidebar
+  const sb = document.getElementById('sbMes');
+  if (sb) sb.textContent = nomeMesL(val);
+
+  // Re-renderiza a seção ativa
+  const activeSection = document.querySelector('section.active')?.id;
+  if (activeSection) {
+    ({
+      dashboard: renderDash,
+      entradas: renderTabelaEntradas,
+      lancamentos: renderTabela,
+      relatorio: renderRelatorio,
+      projecao: renderProj,
+      planejamento: renderPlanejamento,
+      parametrizacao: renderParam,
+      logatividade: renderLog
+    })[activeSection]?.();
   }
 }
 
@@ -1824,7 +1958,7 @@ function renderScore(comp, R, saldo, meses, temInvest) {
    DASHBOARD
 ══════════════════════════════════ */
 function renderDash() {
-  const mes = mesAt();
+  const mes = currentViewMonth;
   document.getElementById('sbMes').textContent  = nomeMesL(mes);
   document.getElementById('dashSub').textContent = nomeMesL(mes);
 
@@ -1863,10 +1997,90 @@ function renderDash() {
   document.getElementById('kSteph').textContent = fmt(eS);
 
   // Reserva hero
-  document.getElementById('hbSaldo').textContent = fmt(sa);
-  document.getElementById('hbMeses').textContent  = meses!=null?meses.toFixed(1)+' meses':'∞ meses';
-  if(meta>0){const p=Math.min(Math.round((sa/meta)*100),100);document.getElementById('hbMetaPct').textContent=p+'% da meta';document.getElementById('hbFill').style.width=p+'%';}
-  else{document.getElementById('hbMetaPct').textContent='Defina a meta';document.getElementById('hbFill').style.width='0%';}
+  const sumInvest = lans.filter(l => l.tipo === 'despesa' && (l.catsRel||[]).includes('Investimento') && getMes(l.data) <= mes).reduce((s, l) => s + Number(l.valor), 0);
+  const saldoReservado = meta + sumInvest;
+  const saldoLivre = sa - saldoReservado;
+  const prevMonth = addMonths(mes + '-01', -1).slice(0, 7);
+  const faturaPagar = lans.filter(l => l.tipo === 'despesa' && l.cartao && l.cartao !== '' && getMes(l.data) === prevMonth).reduce((s, l) => s + Number(l.valor), 0);
+
+  document.getElementById('hbSaldoLivre').textContent = fmt(saldoLivre);
+  document.getElementById('hbSaldoReservado').textContent = fmt(saldoReservado);
+  document.getElementById('hbFaturaPagar').textContent = fmt(faturaPagar);
+
+  // Projeção do próximo mês
+  const nextM = addMonths(mes + '-01', 1).slice(0, 7);
+  const faturaCartaoAtual = lans.filter(l => l.tipo === 'despesa' && l.cartao && l.cartao !== '' && getMes(l.data) === mes).reduce((s, l) => s + Number(l.valor), 0);
+  const parcelamentosNext = lans.filter(l => l.tipo === 'despesa' && l.tipoFin === 'parcelamento' && getMes(l.data) === nextM).reduce((s, l) => s + Number(l.valor), 0);
+  const fixasEstimadas = lans.filter(l => l.tipo === 'despesa' && l.tipoFin === 'fixa' && getMes(l.data) === mes).reduce((s, l) => s + Number(l.valor), 0);
+  const totalProjecao = faturaCartaoAtual + parcelamentosNext + fixasEstimadas;
+
+  document.getElementById('dashProjProxMes').innerHTML = `
+    <div style="display:flex; flex-direction:column; gap:12px; font-family:var(--sans)">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line); padding-bottom:8px">
+        <span style="font-weight:500; color:var(--ink2)">\uD83D\uDCB3 Fatura do Cart\u00E3o Atual (a vencer em ${nomeMesS(nextM)})</span>
+        <span style="font-weight:600; color:var(--purple)">${fmt(faturaCartaoAtual)}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line); padding-bottom:8px">
+        <span style="font-weight:500; color:var(--ink2)">\uD83D\uDD04 Parcelamentos Continuados em ${nomeMesS(nextM)}</span>
+        <span style="font-weight:600; color:var(--amber)">${fmt(parcelamentosNext)}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line); padding-bottom:8px">
+        <span style="font-weight:500; color:var(--ink2)">\uD83D\uDCB8 Despesas Fixas Recorrentes Estimadas</span>
+        <span style="font-weight:600; color:var(--blue)">${fmt(fixasEstimadas)}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding:10px; background:var(--cream); border-radius:var(--r-xs)">
+        <span style="font-weight:700; color:var(--ink)">Total Estimado para ${nomeMesS(nextM)}</span>
+        <span style="font-weight:800; color:var(--red); font-size:16px">${fmt(totalProjecao)}</span>
+      </div>
+    </div>
+  `;
+
+  // Histórico dos últimos 6 meses
+  const mesesHist = [];
+  let tempM = mes;
+  for (let i = 0; i < 6; i++) {
+    mesesHist.push(tempM);
+    tempM = addMonths(tempM + '-01', -1).slice(0, 7);
+  }
+  mesesHist.reverse();
+
+  let histHtml = `
+    <table class="tbl-lancamentos" style="width:100%; border-collapse:collapse; font-family:var(--sans)">
+      <thead>
+        <tr style="border-bottom:1.5px solid var(--line); text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted)">
+          <th style="padding:10px">M\u00EAs</th>
+          <th style="padding:10px; text-align:right">Receitas</th>
+          <th style="padding:10px; text-align:right">Despesas</th>
+          <th style="padding:10px; text-align:right">Resultado</th>
+          <th style="padding:10px; text-align:right">Caixa Final</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  mesesHist.forEach(m => {
+    const e = lans.filter(l => l.tipo === 'entrada' && getMes(l.data) === m).reduce((s, l) => s + Number(l.valor), 0);
+    const d = lans.filter(l => l.tipo === 'despesa' && getMes(l.data) === m).reduce((s, l) => s + Number(l.valor), 0);
+    const res = e - d;
+    const caixa = saldoTotal(m);
+    
+    histHtml += `
+      <tr style="border-bottom:1px solid var(--line); font-size:12px; color:var(--ink2)">
+        <td style="padding:10px; font-weight:500">${nomeMesS(m)}</td>
+        <td style="padding:10px; text-align:right; color:var(--green)">${fmt(e)}</td>
+        <td style="padding:10px; text-align:right; color:var(--red)">${fmt(d)}</td>
+        <td style="padding:10px; text-align:right; font-weight:600; color:${res >= 0 ? 'var(--green)' : 'var(--red)'}">${fmt(res)}</td>
+        <td style="padding:10px; text-align:right; font-weight:600; color:${caixa >= 0 ? 'var(--green)' : 'var(--red)'}">${fmt(caixa)}</td>
+      </tr>
+    `;
+  });
+
+  histHtml += `
+      </tbody>
+    </table>
+  `;
+
+  document.getElementById('dashHist6Meses').innerHTML = histHtml;
 
   renderScore(C,R,sa,meses,temInvest);
   renderCharts(E,D,lista);
@@ -1929,7 +2143,7 @@ function renderInsights(E,D,R,C,sa,meta,meses,lista,finV,eT,eS){
    KPI DETAIL MODAL
 ══════════════════════════════════ */
 function abrirKpiDetail(tipo) {
-  const mes   = mesAt();
+  const mes   = currentViewMonth;
   const lista = getLansMes(mes, dashTitular).filter(l =>
     !dashRelFiltro || (l.catsRel||[]).includes(dashRelFiltro)
   );
@@ -2019,10 +2233,11 @@ function abrirKpiDetail(tipo) {
       const isE   = l.tipo === 'entrada';
       const sinal = isE ? '+' : '−';
       const vcls  = isE ? 'e' : 'd';
-      const sub   = [l.categoria, l.cartao, l.banco, l.tipoFin!=='fixa'&&l.tipoFin!=='variavel'?getFinTipoLabel(l.tipoFin):'', l.titular&&l.titular!=='Família'?l.titular:''].filter(Boolean).join(' · ');
+      const pCell = getParcelaCell(l, mes);
+      const sub   = [l.categoria, l.cartao, l.banco, l.tipoFin!=='fixa'&&l.tipoFin!=='variavel'?(getFinTipoLabel(l.tipoFin) + (pCell && pCell !== '—' ? ' ('+pCell+')' : '')):'', l.titular&&l.titular!=='Família'?l.titular:''].filter(Boolean).join(' · ');
       return `<div class="kpi-detail-row">
         <div class="kpi-detail-date">${dt}</div>
-        <div class="kpi-detail-desc">${escHtml(l.descricao)}<small>${escHtml(sub)}</small></div>
+        <div class="kpi-detail-desc">${getDescricaoHtml(l.descricao)}<small>${escHtml(sub)}</small></div>
         <div class="kpi-detail-val ${vcls}">${sinal}${fmt(Number(l.valor))}</div>
         <div style="display:flex;gap:4px">
           <button class="btn btn-g btn-xs" onclick="fecharKpiDetail();abrirModal${isE?'Entrada':''}(${l.id})" title="Editar">✏</button>
@@ -2349,8 +2564,28 @@ function salvar(){
     lans[i]={...old,...obj};
     logEvento('edicao',`↓ ${obj.descricao}`,`${obj.categoria} · ${fmt(obj.valor)} · ${obj.titular}`);
   } else {
-    lans.push({id:Date.now(),...obj});
-    logEvento('criacao',`↓ ${obj.descricao}`,`${obj.categoria} · ${fmt(obj.valor)} · ${obj.titular}`);
+    if (parc === 'sim' && nParc > 1 && fin !== 'financiamento') {
+      const baseId = Date.now();
+      for (let i = 1; i <= nParc; i++) {
+        let parcelData = addMonths(data, i - 1);
+        let parcelDesc = desc + ' [' + i + '/' + nParc + ']';
+        let parcelObs = obs;
+        if (i === nParc) {
+          parcelObs = obs + (obs ? ' ' : '') + '(Última Parcela!)';
+        }
+        lans.push({
+          ...obj,
+          id: baseId + i,
+          descricao: parcelDesc,
+          data: parcelData,
+          obs: parcelObs
+        });
+      }
+      logEvento('criacao', `↓ ${desc} (${nParc}x)`, `${cat} · ${fmt(val)} · ${titular}`);
+    } else {
+      lans.push({id:Date.now(),...obj});
+      logEvento('criacao',`↓ ${obj.descricao}`,`${obj.categoria} · ${fmt(obj.valor)} · ${obj.titular}`);
+    }
   }
   ls_save(); closeModal(); renderTabela(); renderDash();
   if(document.getElementById('logatividade').classList.contains('active')) renderLog();
@@ -2394,13 +2629,13 @@ function renderTabela(){
       <td style="color:var(--muted);font-size:12px;white-space:nowrap">${dt}</td>
       <td>${pilTitular(l.titular||'Família')}</td>
       <td style="font-size:12px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.categoria}</td>
-      <td><span style="font-weight:500">${escHtml(l.descricao)}</span>${bancoInfo}${l.obs?('<br><span style="font-size:10px;color:var(--muted)">'+escHtml(l.obs)+'</span>'):''}</td>
+      <td><span style="font-weight:500">${getDescricaoHtml(l.descricao)}</span>${bancoInfo}${l.obs?('<br><span style="font-size:10px;color:var(--muted)">'+escHtml(l.obs)+'</span>'):''}</td>
       <td style="max-width:160px">${tagsHtml||'<span style="color:var(--muted);font-size:11px">—</span>'}</td>
       <td><span class="pill p-${l.tipoFin}">${getFinTipoLabel(l.tipoFin)}</span></td>
       <td style="font-size:11px;color:var(--muted)">${l.cartao||'—'}</td>
       <td class="vl-d" style="white-space:nowrap">${fmt(Number(l.valor))}</td>
       <td style="text-align:center"><span class="dot ${l.pago?'dot-on':'dot-off'}"></span></td>
-      <td style="font-size:11px;color:var(--muted)">${l.parcelado==='sim'?l.nParc+'×':'—'}</td>
+      <td style="font-size:11px;color:var(--muted)">${getParcelaCell(l, mes)}</td>
       <td><div style="display:flex;gap:5px"><button class="btn btn-g btn-xs" onclick="abrirModal(${l.id})">✏</button><button class="btn btn-d btn-xs" onclick="remover(${l.id})">✕</button></div></td>
     </tr>`;
   }).join('');
@@ -2491,7 +2726,7 @@ function renderRelatorio(){
   if(relMesEl) relMesEl.style.display=periodo==='custom'?'':'none';
   const tit=document.getElementById('relTitular')?.value||'';
   const agrupar=document.getElementById('relAgrupar')?.value||'catRel';
-  const hoje=mesAt();
+  const hoje=currentViewMonth;
 
   // Filtro de período
   let lista=lans.filter(l=>l.tipo==='despesa');
@@ -2581,7 +2816,7 @@ function renderRelatorio(){
 
 function exportRelCSV(){
   const periodo=document.getElementById('relPeriodo')?.value||'mes';
-  const hoje=mesAt();
+  const hoje=currentViewMonth;
   let lista=lans.filter(l=>l.tipo==='despesa');
   if(periodo==='mes') lista=lista.filter(l=>getMes(l.data)===hoje);
   else if(periodo==='custom'){const m=document.getElementById('relMes')?.value||hoje;lista=lista.filter(l=>getMes(l.data)===m);}
@@ -2600,7 +2835,7 @@ function projAtualizarCats() {
   const catSel = document.getElementById('projCatFiltro');
   const catSep = document.getElementById('projCatSep');
   const catLabel = document.getElementById('projCatLabel');
-  const ms = mesAt();
+  const ms = currentViewMonth;
   const base = getLansMes(ms,'');
 
   if(fluxo === 'saidas') {
@@ -2624,7 +2859,7 @@ function renderProj(){
   const g=document.getElementById('projGroup').value;
   const fluxo=(document.getElementById('projTipoFluxo')?.value)||'todos';
   const catFiltro=(document.getElementById('projCatFiltro')?.value)||'';
-  const ms=mesAt(); const[yB,mB]=ms.split('-').map(Number);
+  const ms=currentViewMonth; const[yB,mB]=ms.split('-').map(Number);
   const meses=[];
   for(let i=0;i<h;i++){const t=mB+i,y=yB+Math.floor((t-1)/12),m=((t-1)%12)+1;meses.push({str:`${y}-${String(m).padStart(2,'0')}`,y,m,label:['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][m-1],year:String(y),isCurrent:i===0});}
   const base=getLansMes(ms,''); const linhas=[];
@@ -3208,7 +3443,7 @@ function renderAlertas() {
   const wrap = document.getElementById('alertasWrap');
   if(!wrap) return;
   const hoje = new Date();
-  const mes  = mesAt();
+  const mes  = currentViewMonth;
   const alertas = [];
 
   // Financiamentos com quitação próxima (até 3 meses)
@@ -3666,7 +3901,7 @@ function renderEvolucao() {
   let acum = 0;
   const labels = [], dataE = [], dataD = [], dataSaldo = [];
   mesesOrdenados.forEach(m => {
-    const lansM = lans.filter(l => getMes(l.data) === m);
+    const lansM = getLancamentosFluxoMes(m);
     const e = lansM.filter(l=>l.tipo==='entrada').reduce((s,l)=>s+Number(l.valor),0);
     const d = lansM.filter(l=>l.tipo==='despesa').reduce((s,l)=>s+Number(l.valor),0);
     acum += e - d;
@@ -3753,7 +3988,7 @@ function renderComparativo() {
   const el = document.getElementById('comparativo');
   if(!el) return;
 
-  const mesA = mesAt();
+  const mesA = currentViewMonth;
   // Mês anterior
   const [ano, mes] = mesA.split('-').map(Number);
   const mesAnteriorDate = new Date(ano, mes - 2, 1);
@@ -3811,7 +4046,7 @@ function renderComparativo() {
 ══════════════════════════════════ */
 function exportRelPDF() {
   const periodo  = document.getElementById('relPeriodo')?.value || 'mes';
-  const hoje     = mesAt();
+  const hoje     = currentViewMonth;
   const relMesEl = document.getElementById('relMes');
   let lista = lans.filter(l => l.tipo === 'despesa');
   if(periodo==='mes')        lista = lista.filter(l => getMes(l.data)===hoje);
@@ -3940,9 +4175,10 @@ function exportRelPDF() {
   // Defaults de parametrização se não existir ainda
   if(!localStorage.getItem('nido_param')){lsp_save();}
 
-  document.getElementById('filtroMes').value=mesAt();
-  const fme=document.getElementById('filtroMesE');if(fme)fme.value=mesAt();
-  const rm=document.getElementById('relMes');if(rm)rm.value=mesAt();
+  document.getElementById('filtroMes').value=currentViewMonth;
+  const fme=document.getElementById('filtroMesE');if(fme)fme.value=currentViewMonth;
+  const rm=document.getElementById('relMes');if(rm)rm.value=currentViewMonth;
+  const gms=document.getElementById('globalMonthSelector');if(gms)gms.value=currentViewMonth;
   // Compatibilidade: garantir catsRel existe
   if(!P.catsRel||!P.catsRel.length) P.catsRel=['Moradia','Transporte','Alimentação','Saúde','Educação','Lazer','Investimento','Financiamentos','Outros'];
   fillFilterSelects();
